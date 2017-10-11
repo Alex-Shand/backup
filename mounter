@@ -1,0 +1,36 @@
+#!/usr/bin/env perl
+
+# Convenience script to mount luks encrypted backup disk according to
+
+# Must be run with sudo, prompts for luks password
+
+use v5.22;
+use warnings;
+use autodie qw( :all );
+
+use File::Basename qw( basename );
+
+my $disk = '/dev/sda1';
+my $mapper = 'Backup';
+my $dir = '/root/Backups';
+
+# Check location of each command with which <command>
+my $cryptsetup = '/sbin/cryptsetup';
+my $mount = '/bin/mount';
+
+check_dir($dir);
+
+my @decrypt_cmd = ($cryptsetup, qw( open --type luks ), $disk, $mapper);
+my @mount_cmd = ($mount, qw( -o ro ), "/dev/mapper/$mapper", $dir);
+
+system(@decrypt_cmd);
+system(@mount_cmd);
+
+sub check_dir {
+    my $dir = shift;
+    if ( ! -e $dir ) {
+	mkdir $dir;
+    } elsif ( ! -d $dir ) {
+	die "$dir is not a directory";
+    }
+}
