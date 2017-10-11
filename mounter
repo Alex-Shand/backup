@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-# Convenience script to mount luks encrypted backup disk according to
+# Convenience script to mount luks encrypted backup disk
 
 # Must be run with sudo, prompts for luks password
 
