@@ -3,8 +3,7 @@
 
 # Process based on http://www.mikerubel.org/computers/rsync_snapshots/
 
-# Requires passwordless ssh comunication in both directions between the backup
-# server and the computers it is to backup see here README.
+# Requires passwordless ssh comunication from the server to each client, see README
 
 # TODO: Strip trailing /'s from source paths
 # TODO: Check free space
@@ -37,9 +36,9 @@ my %sources = ( laptop  => [ '/home/alex' ],
 # Excludes directories, the final paths are given relative to the directory they
 # are excluded from.
 my %excludes = ( laptop => {
-			    '/home/alex' => [ '/Downloads',
-					      '/outside' ]
-			   } );
+                '/home/alex' => [ '/Downloads',
+				  '/outside' ]
+               } );
 
 # Mount point of the backup disk (Assumed to be mounted ro by default)
 my $baseBackupDir = '/root/Backups';
@@ -58,7 +57,7 @@ my @rsync_options = ( '-a', # Recursive, copy symlinks as symlinks, Keep
 		                  # source
 
 		      '--delete-excluded', # As above but with excluded
-		                           # directories
+                                           # directories
 
 		      '--force', # Delete directories even if non-empty
 
@@ -131,6 +130,9 @@ for my $computer ( @computers ){
     my %currentExcludes = %{$excludes{$computer}};
 
     # Run the backup
+    # For rsync at the bottom of the loop
+    my $exit;
+    my $transferFail = 0;
     for my $src ( @{$sources{$computer}} ) {
 	# Disable autodie for system in this loop (rsync failing shouldn't kill
 	# the script)
@@ -147,15 +149,15 @@ for my $computer ( @computers ){
 	my @cmd = ($rsync, @rsync_options, "alex@" . "$computer:$src", $backupDir);
 	system(@cmd) == -1 and die "Can't find rsync ($!)";
 	# Break the loop if the command fails
-	my $exit = $? >> 8;
+	$exit = $? >> 8;
 	# 0 for success, 27 is partial transfer (Caused by permission issues, dissappearing files, etc.)
 	unless ( ($exit == 0) or ($exit == 27) ) {
+	    $transferFail = 1;
 	    last;
 	}
     }
     # If the transfer failed warn, clean up the failed backup and die
-    if ( $? ) {
-	my $exit = $? >> 8;
+    if ( $transferFail ) {
 	warn "Backup failed, rsync returned $exit";
 	remove_tree($backupDir);
 	die;
@@ -177,9 +179,9 @@ sub make_time_stamp {
 # the script exits bar being killed by the OS
 END {
     {
-	# Removes the comma warning 
-	no warnings 'qw';
-	system(qw(mount -o remount,ro), $baseBackupDir);
+    # Removes the comma warning
+    no warnings 'qw';
+    system(qw(mount -o remount,ro), $baseBackupDir);
     }
     say header_footer(scalar(localtime), $me, 1);
 }
