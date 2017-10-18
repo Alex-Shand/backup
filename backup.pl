@@ -96,12 +96,6 @@ if ( $opts{p} ) {
 
 for my $computer ( @computers ){
 
-    # The time now
-    my $time = localtime;
-
-    # Produce a timestamp
-    my $stamp = make_time_stamp($time);
-
     # The directory the backup will be written to
     my $backupDir = File::Spec->catdir($baseBackupDir, $computer);
 
@@ -123,11 +117,20 @@ for my $computer ( @computers ){
 	# When the backups are sorted lexicographically the newest is the last one
 	# in the list
 	my $lastBackup = $backups[$#backups];
-	push @rsync_options, "--link-dest=$lastBackup";
+	push @rsync_options, "--link-dest=../$lastBackup";
     }
 
     # Excludes (If any defined)
-    my %currentExcludes = %{$excludes{$computer}};
+    my %currentExcludes = %{$excludes{$computer} // {}};
+
+    # The time now
+    my $time = localtime;
+
+    # Produce a timestamp
+    my $stamp = make_time_stamp($time);
+
+    # The directory the backup will be saved into
+    my $backup = "$backupDir/$stamp";
 
     # Run the backup
     # For rsync at the bottom of the loop
@@ -138,15 +141,14 @@ for my $computer ( @computers ){
 	# the script)
 	no autodie qw( system );
 
-	# Excludes for this directory
-	my @dirExcludes = @{$currentExcludes{$src}};
+	# Excludes for this directory (If defined)
+	my @dirExcludes = @{$currentExcludes{$src} // []};
 	for my $exclude ( @dirExcludes ) {
-	    say $exclude;
 	    push @rsync_options, "--exclude=$exclude";
 	}
 
 	# TODO: The concatenate operator shouldn't be needed here
-	my @cmd = ($rsync, @rsync_options, "alex@" . "$computer:$src", $backupDir);
+	my @cmd = ($rsync, @rsync_options, "alex@" . "$computer:$src", $backup);
 	system(@cmd) == -1 and die "Can't find rsync ($!)";
 	# Break the loop if the command fails
 	$exit = $? >> 8;
@@ -156,11 +158,10 @@ for my $computer ( @computers ){
 	    last;
 	}
     }
-    # If the transfer failed warn, clean up the failed backup and die
+    # If the transfer failed warn and clean up the failed backup
     if ( $transferFail ) {
-	warn "Backup failed, rsync returned $exit";
+	warn "Backup of $computer failed, rsync returned $exit";
 	remove_tree($backupDir);
-	die;
     }
 }
 
@@ -179,9 +180,9 @@ sub make_time_stamp {
 # the script exits bar being killed by the OS
 END {
     {
-    # Removes the comma warning
-    no warnings 'qw';
-    system(qw(mount -o remount,ro), $baseBackupDir);
+	# Removes the comma warning
+	no warnings 'qw';
+	system(qw(mount -o remount,ro), $baseBackupDir);
     }
     say header_footer(scalar(localtime), $me, 1);
 }
