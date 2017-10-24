@@ -29,8 +29,8 @@ system(@mount_cmd);
 sub check_dir {
     my $dir = shift;
     if ( ! -e $dir ) {
-	mkdir $dir;
+    mkdir $dir;
     } elsif ( ! -d $dir ) {
-	die "$dir is not a directory";
+    die "$dir is not a directory";
     }
 }

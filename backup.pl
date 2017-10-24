@@ -26,19 +26,18 @@ use File::Path qw( remove_tree );
 # backed up twice into the same folder (Probably not a huge issue with
 # rsync)
 my @computers = qw( laptop
-		    desktop );
+                    desktop );
 
 # Sources for each computer, all paths should be absolute and shouldn't have a
 # trailing slash. There must be an entry for each member of @computers above.
 my %sources = ( laptop  => [ '/home/alex' ],
-		desktop => [ '/home/alex' ] );
+                desktop => [ '/home/alex' ] );
 
 # Excludes directories, the final paths are given relative to the directory they
 # are excluded from.
-my %excludes = ( laptop => {
-                '/home/alex' => [ '/Downloads',
-				  '/outside' ]
-               } );
+my %excludes = ( laptop => { '/home/alex' => [ '/Downloads',
+                                               '/outside' ] }
+               );
 
 # Mount point of the backup disk (Assumed to be mounted ro by default)
 my $baseBackupDir = '/root/Backups';
@@ -51,17 +50,17 @@ my $rsync = '/usr/bin/rsync';
 my @rsync_options = ( '-a', # Recursive, copy symlinks as symlinks, Keep
                             # permissions, Keep access times, Keep group
                             # information, Keep owner information, Preserve
-		            # device and special files
+                            # device and special files
 
-		      '--delete', # Delete files in the backup if not in the
-		                  # source
+                      '--delete', # Delete files in the backup if not in the
+                                  # source
 
-		      '--delete-excluded', # As above but with excluded
+                      '--delete-excluded', # As above but with excluded
                                            # directories
 
-		      '--force', # Delete directories even if non-empty
+                      '--force', # Delete directories even if non-empty
 
-		      '--one-file-system'); # Don't cross filesystem boundries
+                      '--one-file-system' ); # Don't cross filesystem boundries
 
 ###################################End Config####################################
 
@@ -105,7 +104,7 @@ for my $computer ( @computers ){
     # If it exists but isn't a directory warn and move on
     } elsif ( ! -d $backupDir ) {
         warn "$backupDir doesn't appear to be a directory, skipping";
-	next;
+        next;
     }
 
     # Check for existing backups
@@ -114,10 +113,10 @@ for my $computer ( @computers ){
 
     # If there are existing backups link to the last one
     if ( @backups ) {
-	# When the backups are sorted lexicographically the newest is the last one
-	# in the list
-	my $lastBackup = $backups[$#backups];
-	push @rsync_options, "--link-dest=../$lastBackup";
+        # When the backups are sorted lexicographically the newest is the last one
+        # in the list
+        my $lastBackup = $backups[$#backups];
+        push @rsync_options, "--link-dest=../$lastBackup";
     }
 
     # Excludes (If any defined)
@@ -137,31 +136,31 @@ for my $computer ( @computers ){
     my $exit;
     my $transferFail = 0;
     for my $src ( @{$sources{$computer}} ) {
-	# Disable autodie for system in this loop (rsync failing shouldn't kill
-	# the script)
-	no autodie qw( system );
+        # Disable autodie for system in this loop (rsync failing shouldn't kill
+        # the script)
+        no autodie qw( system );
 
-	# Excludes for this directory (If defined)
-	my @dirExcludes = @{$currentExcludes{$src} // []};
-	for my $exclude ( @dirExcludes ) {
-	    push @rsync_options, "--exclude=$exclude";
-	}
+        # Excludes for this directory (If defined)
+        my @dirExcludes = @{$currentExcludes{$src} // []};
+        for my $exclude ( @dirExcludes ) {
+            push @rsync_options, "--exclude=$exclude";
+        }
 
-	# TODO: The concatenate operator shouldn't be needed here
-	my @cmd = ($rsync, @rsync_options, "alex@" . "$computer:$src", $backup);
-	system(@cmd) == -1 and die "Can't find rsync ($!)";
-	# Break the loop if the command fails
-	$exit = $? >> 8;
-	# 0 for success, 27 is partial transfer (Caused by permission issues, dissappearing files, etc.)
-	unless ( ($exit == 0) or ($exit == 27) ) {
-	    $transferFail = 1;
-	    last;
-	}
+        # TODO: The concatenate operator shouldn't be needed here
+        my @cmd = ($rsync, @rsync_options, "alex@" . "$computer:$src", $backup);
+        system(@cmd) == -1 and die "Can't find rsync ($!)";
+        # Break the loop if the command fails
+        $exit = $? >> 8;
+        # 0 for success, 27 is partial transfer (Caused by permission issues, dissappearing files, etc.)
+        unless ( ($exit == 0) or ($exit == 27) ) {
+            $transferFail = 1;
+            last;
+        }
     }
     # If the transfer failed warn and clean up the failed backup
     if ( $transferFail ) {
-	warn "Backup of $computer failed, rsync returned $exit";
-	remove_tree($backupDir);
+        warn "Backup of $computer failed, rsync returned $exit";
+        remove_tree($backupDir);
     }
 }
 
@@ -180,9 +179,9 @@ sub make_time_stamp {
 # the script exits bar being killed by the OS
 END {
     {
-	# Removes the comma warning
-	no warnings 'qw';
-	system(qw(mount -o remount,ro), $baseBackupDir);
+        # Removes the comma warning
+        no warnings 'qw';
+        system(qw(mount -o remount,ro), $baseBackupDir);
     }
     say header_footer(scalar(localtime), $me, 1);
 }
